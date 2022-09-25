@@ -177,6 +177,7 @@ class EasyNMT:
                 sent2doc.append(len(splitted_sentences))
             #logger.info("Sentence splitting done after: {:.2f} sec".format(time.time() - start_time))
             #logger.info("Translate {} sentences".format(len(splitted_sentences)))
+            ### comment: step 1
 
             translated_sentences = self.translate_sentences(splitted_sentences, target_lang=target_lang, source_lang=source_lang, show_progress_bar=show_progress_bar, beam_size=beam_size, batch_size=batch_size, **kwargs)
 
@@ -275,6 +276,7 @@ class EasyNMT:
                 iterator = tqdm.tqdm(iterator, total=len(sentences)/scale, unit_scale=scale, smoothing=0)
 
             for start_idx in iterator:
+                ### comment: step 2
                 output.extend(self.translator.translate_sentences(sentences_sorted[start_idx:start_idx+batch_size], source_lang=source_lang, target_lang=target_lang, beam_size=beam_size, device=self.device, **kwargs))
 
             #Restore original sorting of sentences
