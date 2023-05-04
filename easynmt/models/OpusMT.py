@@ -1,10 +1,15 @@
+import copy
 import time
 from transformers import MarianMTModel, MarianTokenizer
 import torch
 from typing import List
 import logging
-from debias_files.debias_manager import DebiasManager
-from debias_files.consts import LANGUAGE_STR_TO_INT_MAP
+import sys
+# sys.path.append("..") # Adds higher directory to python modules path.
+sys.path.append("../../") # Adds higher directory to python modules path.
+from debias_files.src.debias_manager import DebiasManager
+from debias_files.src.consts import LANGUAGE_STR_TO_INT_MAP
+from datetime import datetime
 logger = logging.getLogger(__name__)
 
 
@@ -13,7 +18,20 @@ class OpusMT:
         self.models = {}
         self.max_loaded_models = max_loaded_models
         self.max_length = None
-
+    def _sanity_check_debias(self, orig_embeddings, debiased_embeddings,model):
+        c=0
+        for i in range(len(orig_embeddings)):
+            if (debiased_embeddings[i] != orig_embeddings[i]).any():
+                c += 1
+        if model.debias_target_language:
+            if model.target_lang == 'he':
+                assert (c == len(model.hebrew_professions))
+            elif model.target_lang == 'de':
+                assert (c == len(model.german_professions))
+            # elif model.target_lang == 'ru':
+            #     assert (c == len(model.russian_professions))
+        else:
+            assert (c == len(model.professions))
     def load_model(self, model_name, **kwargs):
         if model_name in self.models:
             self.models[model_name]['last_loaded'] = time.time()
@@ -52,9 +70,10 @@ class OpusMT:
                                  ", 'BEGINNING_DECODER_DEBIAS': 0" + \
                                  ", 'END_DECODER_DEBIAS': 0"+ \
                                  ", 'WORDS_TO_DEBIAS': " + str(kwargs['words_to_debias']) + "}"
-                    weights_encoder = dict['model.encoder.embed_tokens.weight']
+                    weights_encoder = copy.deepcopy(dict['model.encoder.embed_tokens.weight'])
                     debias_manager_encoder = DebiasManager.get_manager_instance(config_str, weights_encoder, tokenizer)
                     new_embeddings_encoder = torch.from_numpy(debias_manager_encoder.debias_embedding_table())
+                    self._sanity_check_debias(weights_encoder, new_embeddings_encoder,debias_manager_encoder)
                     dict['model.encoder.embed_tokens.weight'] = new_embeddings_encoder
                 # option 2: debias decoder inputs
                 if kwargs['beginning_decoder_debias']:
@@ -67,9 +86,10 @@ class OpusMT:
                                  ", 'BEGINNING_DECODER_DEBIAS': 1" + \
                                  ", 'END_DECODER_DEBIAS': 0" + \
                                  ", 'WORDS_TO_DEBIAS': " + str(kwargs['words_to_debias']) + "}"
-                    weights_decoder = dict['model.decoder.embed_tokens.weight']
+                    weights_decoder = copy.deepcopy(dict['model.decoder.embed_tokens.weight'])
                     debias_manager_decoder = DebiasManager.get_manager_instance(config_str, weights_decoder, tokenizer, debias_target_language=True)
                     new_embeddings_decoder = torch.from_numpy(debias_manager_decoder.debias_embedding_table())
+                    self._sanity_check_debias(weights_decoder, new_embeddings_decoder,debias_manager_decoder)
                     dict['model.decoder.embed_tokens.weight'] = new_embeddings_decoder
 
                 # # option 3: debias decoder outputs
@@ -83,12 +103,28 @@ class OpusMT:
                                  ", 'BEGINNING_DECODER_DEBIAS': 0" + \
                                  ", 'END_DECODER_DEBIAS': 1" + \
                                  ", 'WORDS_TO_DEBIAS': " + str(kwargs['words_to_debias']) + "}"
-                    weights_decoder_outputs = dict['lm_head.weight']
+                    weights_decoder_outputs = copy.deepcopy(dict['lm_head.weight'])
                     debias_manager_decoder_outputs = DebiasManager.get_manager_instance(config_str, weights_decoder_outputs, tokenizer, debias_target_language=True)
                     new_embeddings_decoder_outputs = torch.from_numpy(debias_manager_decoder_outputs.debias_embedding_table())
+                    self._sanity_check_debias(weights_decoder_outputs, new_embeddings_decoder_outputs,debias_manager_decoder_outputs)
                     dict['lm_head.weight'] = new_embeddings_decoder_outputs
 
                 model.load_state_dict(dict)
+                now = datetime.now()
+                # dt_string = now.strftime("%d-%m-%Y_%H-%M-%S")
+                # model.save_pretrained(f"/cs/usr/bareluz/gabi_labs/nematus_clean/models/models/en-{target_lang}-"
+                #                       f"DEBIAS_METHOD-{str(kwargs['debias_method'])}-"
+                #                       f"DEBIAS_ENCODER-{str(kwargs['debias_encoder'])}-"
+                #                       f"BEGINNING_DECODER_DEBIAS-{str(kwargs['beginning_decoder_debias'])}-"
+                #                       f"END_DECODER_DEBIAS-{str(kwargs['end_decoder_debias'])}-"
+                #                       f"WORDS_TO_DEBIAS-{str(kwargs['words_to_debias'])}---{dt_string}")
+                # tokenizer.save_pretrained(f"/cs/usr/bareluz/gabi_labs/nematus_clean/models/tokenizers/en-{target_lang}-"
+                #                       f"DEBIAS_METHOD-{str(kwargs['debias_method'])}-"
+                #                       f"DEBIAS_ENCODER-{str(kwargs['debias_encoder'])}-"
+                #                       f"BEGINNING_DECODER_DEBIAS-{str(kwargs['beginning_decoder_debias'])}-"
+                #                       f"END_DECODER_DEBIAS-{str(kwargs['end_decoder_debias'])}-"
+                #                       f"WORDS_TO_DEBIAS-{str(kwargs['words_to_debias'])}---{dt_string}")
+
             else:
                 print("using non debiased embeddings")
 
@@ -108,7 +144,8 @@ class OpusMT:
 
     def translate_sentences(self, sentences: List[str], source_lang: str, target_lang: str, device: str, beam_size: int = 5, **kwargs):
         model_name = 'Helsinki-NLP/opus-mt-{}-{}'.format(source_lang, target_lang)
-        tokenizer, model = self.load_model(model_name)
+        ### comment: step 3
+        tokenizer, model = self.load_model(model_name,**kwargs)
         model.to(device)
 
         inputs = tokenizer(sentences, truncation=True, padding=True, max_length=self.max_length, return_tensors="pt")
