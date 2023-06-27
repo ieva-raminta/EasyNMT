@@ -14,7 +14,11 @@ import re
 import logging
 import time
 import os
-
+import copy
+import sys
+sys.path.append("../../") # Adds higher directory to python modules path.
+from debias_files.src.debias_manager import DebiasManager
+from debias_files.src.consts import LANGUAGE_STR_TO_INT_MAP
 logger = logging.getLogger(__name__)
 
 class EasyNMT:
@@ -89,11 +93,29 @@ class EasyNMT:
 
             if load_translator:
                 module_class = import_from_string(self.config['model_class'])
+                self.config['model_args']['src_lang'] = kwargs['src_lang']
+                self.config['model_args']['tgt_lang'] = kwargs['tgt_lang']
                 self.translator = module_class(easynmt_path=model_path, **self.config['model_args'])
                 self.translator.max_length = max_length
 
 
 
+    def _sanity_check_debias(self, orig_embeddings, debiased_embeddings,model):
+        c=0
+        orig_embeddings = orig_embeddings.to("cuda:0")
+        debiased_embeddings = debiased_embeddings.to("cuda:0")
+        for i in range(len(orig_embeddings)):
+            if (debiased_embeddings[i] != orig_embeddings[i]).any():
+                c += 1
+        if model.debias_target_language:
+            if model.target_lang == 'he':
+                assert (c == len(model.hebrew_professions))
+            elif model.target_lang == 'de':
+                assert (c == len(model.german_professions))
+            # elif model.target_lang == 'ru':
+            #     assert (c == len(model.russian_professions))
+        else:
+            assert (c == len(model.professions))
 
     def translate(self, documents: Union[str, List[str]], target_lang: str, source_lang: str = None,
                   show_progress_bar: bool = False, beam_size: int = 5, batch_size: int = 16,
@@ -116,11 +138,83 @@ class EasyNMT:
         """
 
         #Method_args will store all passed arguments to method
+        if kwargs['use_debiased']:
+            print("using debiased embeddings")
+            dict = self.translator.model.state_dict()
+            # option 1: debias encoder inputs
+            if kwargs['debias_encoder']:
+                print('debias_encoder') #todo add translaion_model to kwargs, it was overriten
+                config_str = "{'USE_DEBIASED': 1" \
+                             ", 'LANGUAGE': " + str(LANGUAGE_STR_TO_INT_MAP[target_lang]) + \
+                             ", 'DEBIAS_METHOD': " + str(kwargs['debias_method']) + \
+                             ", 'TRANSLATION_MODEL': " + str(kwargs['translation_model']) + \
+                             ", 'DEBIAS_ENCODER': 1" \
+                             ", 'BEGINNING_DECODER_DEBIAS': 0" + \
+                             ", 'END_DECODER_DEBIAS': 0"+ \
+                             ", 'WORDS_TO_DEBIAS': " + str(kwargs['words_to_debias']) + "}"
+                weights_encoder = copy.deepcopy(dict['model.encoder.embed_tokens.weight'])
+                debias_manager_encoder = DebiasManager.get_manager_instance(config_str, weights_encoder, self.translator.tokenizer)
+                new_embeddings_encoder = torch.from_numpy(debias_manager_encoder.debias_embedding_table())
+                self._sanity_check_debias(weights_encoder, new_embeddings_encoder,debias_manager_encoder)
+                dict['model.encoder.embed_tokens.weight'] = new_embeddings_encoder
+            # option 2: debias decoder inputs
+            if kwargs['beginning_decoder_debias']:
+                print('beginning_decoder_debias')
+                config_str = "{'USE_DEBIASED': 1" \
+                             ", 'LANGUAGE': " + str(LANGUAGE_STR_TO_INT_MAP[target_lang]) + \
+                             ", 'DEBIAS_METHOD': " + str(kwargs['debias_method']) + \
+                             ", 'TRANSLATION_MODEL': " + str(kwargs['translation_model']) + \
+                             ", 'DEBIAS_ENCODER': 0" \
+                             ", 'BEGINNING_DECODER_DEBIAS': 1" + \
+                             ", 'END_DECODER_DEBIAS': 0" + \
+                             ", 'WORDS_TO_DEBIAS': " + str(kwargs['words_to_debias']) + "}"
+                weights_decoder = copy.deepcopy(dict['model.decoder.embed_tokens.weight'])
+                debias_manager_decoder = DebiasManager.get_manager_instance(config_str, weights_decoder, self.translator.tokenizer, debias_target_language=True)
+                new_embeddings_decoder = torch.from_numpy(debias_manager_decoder.debias_embedding_table())
+                self._sanity_check_debias(weights_decoder, new_embeddings_decoder,debias_manager_decoder)
+                dict['model.decoder.embed_tokens.weight'] = new_embeddings_decoder
+
+            # # option 3: debias decoder outputs
+            if kwargs['end_decoder_debias']:
+                print('end_decoder_debias')
+                config_str = "{'USE_DEBIASED': 1" \
+                             ", 'LANGUAGE': " + str(LANGUAGE_STR_TO_INT_MAP[target_lang]) + \
+                             ", 'DEBIAS_METHOD': " + str(kwargs['debias_method']) + \
+                             ", 'TRANSLATION_MODEL': " + str(kwargs['translation_model']) + \
+                             ", 'DEBIAS_ENCODER': 0" \
+                             ", 'BEGINNING_DECODER_DEBIAS': 0" + \
+                             ", 'END_DECODER_DEBIAS': 1" + \
+                             ", 'WORDS_TO_DEBIAS': " + str(kwargs['words_to_debias']) + "}"
+                weights_decoder_outputs = copy.deepcopy(dict['lm_head.weight'])
+                debias_manager_decoder_outputs = DebiasManager.get_manager_instance(config_str, weights_decoder_outputs, self.translator.tokenizer, debias_target_language=True)
+                new_embeddings_decoder_outputs = torch.from_numpy(debias_manager_decoder_outputs.debias_embedding_table())
+                self._sanity_check_debias(weights_decoder_outputs, new_embeddings_decoder_outputs,debias_manager_decoder_outputs)
+                dict['lm_head.weight'] = new_embeddings_decoder_outputs
+
+            self.translator.model.load_state_dict(dict)
+            # now = datetime.now()
+            # dt_string = now.strftime("%d-%m-%Y_%H-%M-%S")
+            # model.save_pretrained(f"/cs/usr/bareluz/gabi_labs/nematus_clean/models/models/en-{target_lang}-"
+            #                       f"DEBIAS_METHOD-{str(kwargs['debias_method'])}-"
+            #                       f"DEBIAS_ENCODER-{str(kwargs['debias_encoder'])}-"
+            #                       f"BEGINNING_DECODER_DEBIAS-{str(kwargs['beginning_decoder_debias'])}-"
+            #                       f"END_DECODER_DEBIAS-{str(kwargs['end_decoder_debias'])}-"
+            #                       f"WORDS_TO_DEBIAS-{str(kwargs['words_to_debias'])}---{dt_string}")
+            # tokenizer.save_pretrained(f"/cs/usr/bareluz/gabi_labs/nematus_clean/models/tokenizers/en-{target_lang}-"
+            #                       f"DEBIAS_METHOD-{str(kwargs['debias_method'])}-"
+            #                       f"DEBIAS_ENCODER-{str(kwargs['debias_encoder'])}-"
+            #                       f"BEGINNING_DECODER_DEBIAS-{str(kwargs['beginning_decoder_debias'])}-"
+            #                       f"END_DECODER_DEBIAS-{str(kwargs['end_decoder_debias'])}-"
+            #                       f"WORDS_TO_DEBIAS-{str(kwargs['words_to_debias'])}---{dt_string}")
+
+        else:
+            print("using non debiased embeddings")
+
+        self.translator.model.eval()
         method_args = locals()
         del method_args['self']
         del method_args['kwargs']
         method_args.update(kwargs)
-
         if source_lang == target_lang:
             return documents
 
@@ -131,7 +225,7 @@ class EasyNMT:
 
         if source_lang is None and document_language_detection:
             src_langs = [self.language_detection(doc) for doc in documents]
-            
+
             # Group by languages
             lang2id = {}
             for idx, lng in enumerate(src_langs):
@@ -160,6 +254,8 @@ class EasyNMT:
 
 
         if perform_sentence_splitting:
+
+
             if sentence_splitter is None:
                 sentence_splitter = self.sentence_splitting
 
@@ -178,7 +274,13 @@ class EasyNMT:
             #logger.info("Sentence splitting done after: {:.2f} sec".format(time.time() - start_time))
             #logger.info("Translate {} sentences".format(len(splitted_sentences)))
             ### comment: step 1
-
+            kwargs.pop('use_debiased')
+            kwargs.pop('debias_method')
+            kwargs.pop('debias_encoder')
+            kwargs.pop('beginning_decoder_debias')
+            kwargs.pop('end_decoder_debias')
+            kwargs.pop('words_to_debias')
+            kwargs.pop('translation_model')
             translated_sentences = self.translate_sentences(splitted_sentences, target_lang=target_lang, source_lang=source_lang, show_progress_bar=show_progress_bar, beam_size=beam_size, batch_size=batch_size, **kwargs)
 
             # Merge sentences back to documents
@@ -191,11 +293,12 @@ class EasyNMT:
 
             #logger.info("Document reconstruction done after: {:.2f} sec".format(time.time() - start_time))
         else:
+
             translated_docs = self.translate_sentences(documents, target_lang=target_lang, source_lang=source_lang, show_progress_bar=show_progress_bar, beam_size=beam_size, batch_size=batch_size, **kwargs)
 
         if is_single_doc:
-            translated_docs = translated_docs[0]
 
+            translated_docs = translated_docs[0]
         return translated_docs
 
     @staticmethod
