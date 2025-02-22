@@ -96,7 +96,11 @@ class EasyNMT:
                 if 'src_lang' in self.config['model_args'] and 'tgt_lang' in self.config['model_args']:
                     self.config['model_args']['src_lang'] = kwargs['src_lang']
                     self.config['model_args']['tgt_lang'] = kwargs['tgt_lang']
-                self.translator = module_class(easynmt_path=model_path, **self.config['model_args'])
+                elif 'src_lang' in self.config['model_args']['tokenizer_args'] and 'tgt_lang' in self.config['model_args']['tokenizer_args']:
+                    self.config['model_args']['tokenizer_args']['src_lang'] = kwargs['src_lang']
+                    self.config['model_args']['tokenizer_args']['tgt_lang'] = kwargs['tgt_lang']
+
+                self.translator = module_class(easynmt_path=model_path, **self.config['model_args'], src_lang = kwargs['src_lang'],tgt_lang= kwargs['tgt_lang'])
                 self.translator.max_length = max_length
 
 
@@ -137,7 +141,7 @@ class EasyNMT:
         :param kwargs: Optional arguments for the translator model
         :return: Returns a string or a list of string with the translated documents
         """
-        if kwargs['translation_model'] == TranslationModelsEnum.MBART50:
+        if kwargs['translation_model'] == TranslationModelsEnum.MBART50.value:
             #Method_args will store all passed arguments to method
             if kwargs['use_debiased']:
                 print("using debiased embeddings")
