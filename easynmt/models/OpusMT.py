@@ -28,8 +28,13 @@ class OpusMT:
                 assert (c == len(model.hebrew_professions))
             elif model.target_lang == 'de':
                 assert (c == len(model.german_professions))
-            # elif model.target_lang == 'ru':
-            #     assert (c == len(model.russian_professions))
+            elif model.target_lang == 'ru':
+                assert (c == len(model.russian_professions))
+            elif model.target_lang == 'fr':
+                assert (c == len(model.french_professions))
+            elif model.target_lang == 'es':
+                assert (c == len(model.spanish_professions
+                                ))
         else:
             assert (c == len(model.professions))
     def load_model(self, model_name, **kwargs):

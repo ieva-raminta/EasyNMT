@@ -54,8 +54,8 @@ class EasyNMT:
         if translator is not None:
             self.translator = translator
         else:
-            if os.path.exists(model_name) and os.path.isdir(model_name):
-                model_path = model_name
+            if os.path.exists("/home/irs38/intrinsic-debiasing-performance-on-NMT/EasyNMT/models/"+model_name) and os.path.isdir("/home/irs38/intrinsic-debiasing-performance-on-NMT/EasyNMT/models/"+model_name):
+                model_path = "/home/irs38/intrinsic-debiasing-performance-on-NMT/EasyNMT/models/"+model_name
             else:
                 model_name = model_name.lower()
                 model_path = os.path.join(cache_folder, model_name)
@@ -93,14 +93,16 @@ class EasyNMT:
 
             if load_translator:
                 module_class = import_from_string(self.config['model_class'])
-                if 'src_lang' in self.config['model_args'] and 'tgt_lang' in self.config['model_args']:
+                sources = [pair.split("-")[0] for pair in self.config["lang_pairs"]]
+                targets = [pair.split("-")[1] for pair in self.config["lang_pairs"]]
+                if kwargs['src_lang'] in sources and kwargs['tgt_lang'] in targets:
                     self.config['model_args']['src_lang'] = kwargs['src_lang']
                     self.config['model_args']['tgt_lang'] = kwargs['tgt_lang']
                 elif 'src_lang' in self.config['model_args']['tokenizer_args'] and 'tgt_lang' in self.config['model_args']['tokenizer_args']:
                     self.config['model_args']['tokenizer_args']['src_lang'] = kwargs['src_lang']
                     self.config['model_args']['tokenizer_args']['tgt_lang'] = kwargs['tgt_lang']
 
-                self.translator = module_class(easynmt_path=model_path, **self.config['model_args'], src_lang = kwargs['src_lang'],tgt_lang= kwargs['tgt_lang'])
+                self.translator = module_class(easynmt_path=model_path)#, **self.config['model_args'])#, src_lang = kwargs['src_lang'],tgt_lang= kwargs['tgt_lang'])
                 self.translator.max_length = max_length
 
 
@@ -117,8 +119,14 @@ class EasyNMT:
                 assert (c == len(model.hebrew_professions))
             elif model.target_lang == 'de':
                 assert (c == len(model.german_professions))
-            # elif model.target_lang == 'ru':
-            #     assert (c == len(model.russian_professions))
+            elif model.target_lang == 'ru':
+                assert (c == len(model.russian_professions))
+            elif model.target_lang == 'uk':
+                assert (c == len(model.ukrainian_professions))
+            elif model.target_lang == 'fr':
+                assert (c == len(model.french_professions))
+            elif model.target_lang == 'es':
+                assert (c == len(model.spanish_professions))
         else:
             assert (c == len(model.professions))
 
@@ -141,10 +149,11 @@ class EasyNMT:
         :param kwargs: Optional arguments for the translator model
         :return: Returns a string or a list of string with the translated documents
         """
-        if kwargs['translation_model'] == TranslationModelsEnum.MBART50.value:
+        if kwargs['translation_model'] == TranslationModelsEnum.EASY_NMT.value:
             #Method_args will store all passed arguments to method
             if kwargs['use_debiased']:
                 print("using debiased embeddings")
+                import pdb; pdb.set_trace()
                 dict = self.translator.model.state_dict()
                 # option 1: debias encoder inputs
 
