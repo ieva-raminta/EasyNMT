@@ -17,8 +17,8 @@ import os
 import copy
 import sys
 sys.path.append("../../") # Adds higher directory to python modules path.
-from .debias_manager import DebiasManager
-from .consts import LANGUAGE_STR_TO_INT_MAP, TranslationModelsEnum
+from debias_manager import DebiasManager
+from consts import LANGUAGE_STR_TO_INT_MAP, TranslationModelsEnum
 logger = logging.getLogger(__name__)
 
 class EasyNMT:

@@ -7,8 +7,8 @@ import logging
 import sys
 # sys.path.append("..") # Adds higher directory to python modules path.
 sys.path.append("../../") # Adds higher directory to python modules path.
-from .src.debias_manager import DebiasManager
-from .src.consts import LANGUAGE_STR_TO_INT_MAP
+from debias_manager import DebiasManager
+from consts import LANGUAGE_STR_TO_INT_MAP
 from datetime import datetime
 logger = logging.getLogger(__name__)
 
