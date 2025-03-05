@@ -45,7 +45,7 @@ class OpusMT:
             logger.info("Load model: "+model_name)
             tokenizer = MarianTokenizer.from_pretrained(model_name)
             ### comment: step 4
-            model = MarianMTModel.from_pretrained(model_name, **kwargs)
+            model = MarianMTModel.from_pretrained(model_name)#, **kwargs)
             ### comment: sanity check
             # config = "{'USE_DEBIASED': 0, 'LANGUAGE': "+str(LANGUAGE_STR_TO_INT_MAP[tokenizer.target_lang])+", 'COLLECT_EMBEDDING_TABLE': 0, 'DEBIAS_METHOD': 0, 'TRANSLATION_MODEL': 1}"
             # debiasManager = DebiasManager(config)

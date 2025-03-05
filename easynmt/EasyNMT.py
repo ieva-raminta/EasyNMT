@@ -104,6 +104,7 @@ class EasyNMT:
 
                 self.translator = module_class(easynmt_path=model_path)#, **self.config['model_args'])#, src_lang = kwargs['src_lang'],tgt_lang= kwargs['tgt_lang'])
                 self.translator.max_length = max_length
+                self.translator.tokenizer, self.translator.model = self.translator.load_model("Helsinki-NLP/opus-mt-en-"+kwargs['tgt_lang'], **kwargs)
 
 
 
@@ -149,11 +150,10 @@ class EasyNMT:
         :param kwargs: Optional arguments for the translator model
         :return: Returns a string or a list of string with the translated documents
         """
-        if kwargs['translation_model'] == TranslationModelsEnum.EASY_NMT.value:
+        if kwargs['translation_model'] != TranslationModelsEnum.EASY_NMT.value:
             #Method_args will store all passed arguments to method
             if kwargs['use_debiased']:
                 print("using debiased embeddings")
-                import pdb; pdb.set_trace()
                 dict = self.translator.model.state_dict()
                 # option 1: debias encoder inputs
 
