@@ -11,7 +11,8 @@ from debias_manager import DebiasManager
 from consts import LANGUAGE_STR_TO_INT_MAP
 from datetime import datetime
 logger = logging.getLogger(__name__)
-
+from torch.nn.functional import log_softmax
+import os 
 
 class OpusMT:
     def __init__(self, easynmt_path: str = None, max_loaded_models: int = 10):
@@ -154,21 +155,58 @@ class OpusMT:
         model.to(device)
         inputs = tokenizer(sentences, truncation=True, padding=True, max_length=self.max_length, return_tensors="pt")
 
+        names = "original"
+
         for key in inputs:
             inputs[key] = inputs[key].to(device)
 
-        with torch.no_grad():
-            kwargs.pop('use_debiased')
-            kwargs.pop('debias_method')
-            kwargs.pop('debias_encoder')
-            kwargs.pop('beginning_decoder_debias')
-            kwargs.pop('end_decoder_debias')
-            kwargs.pop('words_to_debias')
-            kwargs.pop('translation_model')
-            translated = model.generate(**inputs, num_beams=beam_size, **kwargs)
-            output = [tokenizer.decode(t, skip_special_tokens=True) for t in translated]
+        if os.path.exists(f'/home/irs38/uncertainty/translations/samples_{model_name.split("/")[-1]}_{target_lang}_temp1_{names}_unambiguous.txt'):
+            os.remove(f'/home/irs38/uncertainty/translations/samples_{model_name.split("/")[-1]}_{target_lang}_temp1_{names}_unambiguous.txt')
 
-        return output
+        outputs = model.generate(
+            **inputs,
+            num_return_sequences=128,
+            num_beams=1,
+            do_sample=True,
+            temperature=1,
+            epsilon_cutoff=0.2,
+            output_scores=True, 
+            return_dict_in_generate=True
+        )
+
+        sequences = outputs.sequences
+        scores = outputs.scores        
+
+        log_probs = []
+        for seq_idx, sequence in enumerate(sequences):
+            seq_log_prob = 0.0  
+            for t, step_scores in enumerate(scores):
+                log_probs_t = log_softmax(step_scores, dim=-1)
+                token_id = sequence[t+1] 
+                if token_id not in tokenizer.all_special_ids:
+                    seq_log_prob += log_probs_t[seq_idx, token_id].clamp(min=-1e10).item()
+
+            log_probs.append(seq_log_prob)
+
+        debiased = 'debiased' if kwargs['use_debiased'] else 'nondebiased'
+
+        with open(f'/home/irs38/uncertainty/translations/samples_{debiased}-{model_name.split("/")[-1]}_{target_lang}_temp1_{names}_unambiguous.txt', 'a') as f:
+            for sample in sequences:
+                decoded = tokenizer.decode(sample, skip_special_tokens=True)
+                f.write(decoded + '\n')
+        with open(f'/home/irs38/uncertainty/translations/log_probs_{debiased}-{model_name.split("/")[-1]}_{target_lang}_temp1_{names}_unambiguous.txt', 'a') as f:
+            for log_prob in log_probs:
+                f.write(str(log_prob) + '\n')
+
+        kwargs.pop('use_debiased')
+        kwargs.pop('debias_method')
+        kwargs.pop('debias_encoder')
+        kwargs.pop('beginning_decoder_debias')
+        kwargs.pop('end_decoder_debias')
+        kwargs.pop('words_to_debias')
+        kwargs.pop('translation_model')
+
+        return outputs
 
     def save(self, output_path):
         return {"max_loaded_models": self.max_loaded_models}
