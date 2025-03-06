@@ -159,6 +159,8 @@ class OpusMT:
 
         for key in inputs:
             inputs[key] = inputs[key].to(device)
+        
+        debiased = 'debiased' if kwargs['use_debiased'] else 'nondebiased'
 
         if os.path.exists(f'/home/irs38/uncertainty/translations/samples_{debiased}-{model_name.split("/")[-1]}_{target_lang}_temp1_{names}_unambiguous.txt'):
             os.remove(f'/home/irs38/uncertainty/translations/samples_{debiased}-{model_name.split("/")[-1]}_{target_lang}_temp1_{names}_unambiguous.txt')
@@ -187,8 +189,6 @@ class OpusMT:
                     seq_log_prob += log_probs_t[seq_idx, token_id].clamp(min=-1e10).item()
 
             log_probs.append(seq_log_prob)
-
-        debiased = 'debiased' if kwargs['use_debiased'] else 'nondebiased'
 
         with open(f'/home/irs38/uncertainty/translations/samples_{debiased}-{model_name.split("/")[-1]}_{target_lang}_temp1_{names}_unambiguous.txt', 'a') as f:
             for sample in sequences:
