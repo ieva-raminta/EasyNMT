@@ -386,20 +386,20 @@ class EasyNMT:
                     raise e
         else:
             #Sort by length to speed up processing
-            length_sorted_idx = np.argsort([-len(sen) for sen in sentences])
-            sentences_sorted = [sentences[idx] for idx in length_sorted_idx]
+            #length_sorted_idx = np.argsort([-len(sen) for sen in sentences])
+            #sentences_sorted = [sentences[idx] for idx in length_sorted_idx]
 
-            iterator = range(0, len(sentences_sorted), batch_size)
+            iterator = range(0, len(sentences), batch_size)
             if show_progress_bar:
                 scale = min(batch_size, len(sentences))
                 iterator = tqdm.tqdm(iterator, total=len(sentences)/scale, unit_scale=scale, smoothing=0)
 
             for start_idx in iterator:
                 ### comment: step 2
-                output.extend(self.translator.translate_sentences(sentences_sorted[start_idx:start_idx+batch_size], source_lang=source_lang, target_lang=target_lang, beam_size=beam_size, device=self.device, **kwargs))
+                output.extend(self.translator.translate_sentences(sentences[start_idx:start_idx+batch_size], source_lang=source_lang, target_lang=target_lang, beam_size=beam_size, device=self.device, **kwargs))
 
             #Restore original sorting of sentences
-            output = [output[idx] for idx in np.argsort(length_sorted_idx)]
+            #output = [output[idx] for idx in np.argsort(length_sorted_idx)]
 
         if is_single_sentence:
             output = output[0]

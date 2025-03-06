@@ -160,8 +160,8 @@ class OpusMT:
         for key in inputs:
             inputs[key] = inputs[key].to(device)
 
-        if os.path.exists(f'/home/irs38/uncertainty/translations/samples_{model_name.split("/")[-1]}_{target_lang}_temp1_{names}_unambiguous.txt'):
-            os.remove(f'/home/irs38/uncertainty/translations/samples_{model_name.split("/")[-1]}_{target_lang}_temp1_{names}_unambiguous.txt')
+        if os.path.exists(f'/home/irs38/uncertainty/translations/samples_{debiased}-{model_name.split("/")[-1]}_{target_lang}_temp1_{names}_unambiguous.txt'):
+            os.remove(f'/home/irs38/uncertainty/translations/samples_{debiased}-{model_name.split("/")[-1]}_{target_lang}_temp1_{names}_unambiguous.txt')
 
         outputs = model.generate(
             **inputs,
