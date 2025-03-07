@@ -133,7 +133,7 @@ class EasyNMT:
 
     def translate(self, documents: Union[str, List[str]], target_lang: str, source_lang: str = None,
                   show_progress_bar: bool = False, beam_size: int = 5, batch_size: int = 16,
-                  perform_sentence_splitting: bool = True, paragraph_split: str = "\n", sentence_splitter=None,  document_language_detection: bool = True,
+                  perform_sentence_splitting: bool = False, paragraph_split: str = "\n", sentence_splitter=None,  document_language_detection: bool = True,
                   **kwargs):
         """
         This method translates the given set of documents

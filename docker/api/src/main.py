@@ -38,7 +38,7 @@ model = EasyNMT(model_name, load_translator=IS_BACKEND, **model_args)
 
 
 @app.get("/translate")
-async def translate(target_lang: str, text: List[str] = Query([]), source_lang: Optional[str] = '', beam_size: Optional[int] = 5, perform_sentence_splitting: Optional[bool] = True):
+async def translate(target_lang: str, text: List[str] = Query([]), source_lang: Optional[str] = '', beam_size: Optional[int] = 5, perform_sentence_splitting: Optional[bool] = False):
     """
     Translates the text to the given target language.
     :param text: Text that should be translated
