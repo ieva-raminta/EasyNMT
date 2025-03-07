@@ -309,7 +309,7 @@ class EasyNMT:
 
             #logger.info("Document reconstruction done after: {:.2f} sec".format(time.time() - start_time))
         else:
-
+            import pdb; pdb.set_trace()
             translated_docs = self.translate_sentences(documents, target_lang=target_lang, source_lang=source_lang, show_progress_bar=show_progress_bar, beam_size=beam_size, batch_size=batch_size, **kwargs)
 
         if is_single_doc:
