@@ -207,6 +207,10 @@ class EasyNMT:
                     dict['lm_head.weight'] = new_embeddings_decoder_outputs
 
                 self.translator.model.load_state_dict(dict)
+                # save model weights so that I can use them later
+                self.translator.model.save_pretrained(f"/home/irs38/intrinsic-debiasing-performance-on-NMT/EasyNMT/models/models/en-{target_lang}")
+                self.translator.tokenizer.save_pretrained(f"/home/irs38/intrinsic-debiasing-performance-on-NMT/EasyNMT/models/tokenizers/en-{target_lang}")
+
                 # now = datetime.now()
                 # dt_string = now.strftime("%d-%m-%Y_%H-%M-%S")
                 # model.save_pretrained(f"/cs/usr/bareluz/gabi_labs/nematus_clean/models/models/en-{target_lang}-"
