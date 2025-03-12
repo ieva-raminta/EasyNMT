@@ -207,7 +207,7 @@ class EasyNMT:
                     dict['lm_head.weight'] = new_embeddings_decoder_outputs
 
                 self.translator.model.load_state_dict(dict)
-                # save model weights so that I can use them later
+                print("Saving model...")
                 self.translator.model.save_pretrained(f"/home/irs38/intrinsic-debiasing-performance-on-NMT/EasyNMT/models/models/en-{target_lang}")
                 self.translator.tokenizer.save_pretrained(f"/home/irs38/intrinsic-debiasing-performance-on-NMT/EasyNMT/models/tokenizers/en-{target_lang}")
 

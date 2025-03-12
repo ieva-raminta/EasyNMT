@@ -116,7 +116,10 @@ class OpusMT:
                     dict['lm_head.weight'] = new_embeddings_decoder_outputs
 
                 model.load_state_dict(dict)
-                now = datetime.now()
+                print("Saving model...")
+                model.save_pretrained(f"/home/irs38/intrinsic-debiasing-performance-on-NMT/EasyNMT/models/models/en-{target_lang}")
+                tokenizer.save_pretrained(f"/home/irs38/intrinsic-debiasing-performance-on-NMT/EasyNMT/models/tokenizers/en-{target_lang}")
+
                 # dt_string = now.strftime("%d-%m-%Y_%H-%M-%S")
                 # model.save_pretrained(f"/cs/usr/bareluz/gabi_labs/nematus_clean/models/models/en-{target_lang}-"
                 #                       f"DEBIAS_METHOD-{str(kwargs['debias_method'])}-"
