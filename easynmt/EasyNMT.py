@@ -132,7 +132,7 @@ class EasyNMT:
             assert (c == len(model.professions))
 
     def translate(self, documents: Union[str, List[str]], target_lang: str, source_lang: str = None,
-                  show_progress_bar: bool = False, beam_size: int = 5, batch_size: int = 32,
+                  show_progress_bar: bool = False, beam_size: int = 5, batch_size: int = 16,
                   perform_sentence_splitting: bool = False, paragraph_split: str = "\n", sentence_splitter=None,  document_language_detection: bool = True,
                   **kwargs):
         """
@@ -340,7 +340,7 @@ class EasyNMT:
         return translated_doc
 
     def translate_sentences(self, sentences: Union[str, List[str]], target_lang: str, source_lang: str = None,
-                  show_progress_bar: bool = False, beam_size: int = 5, batch_size: int = 32, **kwargs):
+                  show_progress_bar: bool = False, beam_size: int = 5, batch_size: int = 16, **kwargs):
         """
         This method translates individual sentences.
 

@@ -53,6 +53,6 @@ model.translate(sentences[0:100], source_lang='en', target_lang='de', perform_se
 
 #Start translation speed measure
 start_time = time.time()
-model.translate(sentences, source_lang='en', target_lang='de', batch_size=64, show_progress_bar=True, perform_sentence_splitting=False)
+model.translate(sentences, source_lang='en', target_lang='de', batch_size=16, show_progress_bar=True, perform_sentence_splitting=False)
 end_time = time.time()
 print("Done after {:.2f} sec. {:.2f} sentences / second".format(end_time-start_time, len(sentences) / (end_time-start_time)))

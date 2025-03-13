@@ -87,7 +87,7 @@ async def translate(target_lang: str, text: List[str] = Query([]), source_lang: 
 
 
         try:
-            output['translated'] = model.translate(text, target_lang=target_lang, source_lang=source_lang, beam_size=beam_size, perform_sentence_splitting=perform_sentence_splitting, batch_size=int(os.getenv('EASYNMT_BATCH_SIZE', 32)))
+            output['translated'] = model.translate(text, target_lang=target_lang, source_lang=source_lang, beam_size=beam_size, perform_sentence_splitting=perform_sentence_splitting, batch_size=int(os.getenv('EASYNMT_BATCH_SIZE', 16)))
         except Exception as e:
             raise HTTPException(403, detail="Error: "+str(e))
 

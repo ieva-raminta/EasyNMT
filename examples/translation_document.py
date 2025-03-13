@@ -23,7 +23,7 @@ target_lang = 'de'      # We want to translate the sentences to German (de)
 
 model = EasyNMT('opus-mt')
 
-translations = model.translate(documents, target_lang=target_lang, batch_size=8, beam_size=3)
+translations = model.translate(documents, target_lang=target_lang, batch_size=16, beam_size=3)
 
 for doc in translations:
     print(doc)
