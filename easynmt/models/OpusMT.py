@@ -158,7 +158,7 @@ class OpusMT:
         model.to(device)
         inputs = tokenizer(sentences, truncation=True, padding=True, max_length=self.max_length, return_tensors="pt")
 
-        names = "original"
+        names = "names"
 
         for key in inputs:
             inputs[key] = inputs[key].to(device)
