@@ -190,11 +190,11 @@ class OpusMT:
 
             log_probs.append(seq_log_prob)
 
-        with open(f'/home/irs38/uncertainty/translations/samples_{debiased}-{model_name.split("/")[-1]}_{target_lang}_temp1_{names}_unambiguous.txt', 'a') as f:
+        with open(f'/home/irs38/uncertainty/translations/samples_{debiased}-{model_name.split("/")[-1]}_{target_lang}_temp1.0_{names}_unambiguous.txt', 'a') as f:
             for sample in sequences:
                 decoded = tokenizer.decode(sample, skip_special_tokens=True)
                 f.write(decoded + '\n')
-        with open(f'/home/irs38/uncertainty/translations/log_probs_{debiased}-{model_name.split("/")[-1]}_{target_lang}_temp1_{names}_unambiguous.txt', 'a') as f:
+        with open(f'/home/irs38/uncertainty/translations/log_probs_{debiased}-{model_name.split("/")[-1]}_{target_lang}_temp1.0_{names}_unambiguous.txt', 'a') as f:
             for log_prob in log_probs:
                 f.write(str(log_prob) + '\n')
 
